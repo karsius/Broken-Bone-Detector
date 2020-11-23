@@ -9,7 +9,14 @@ addpath('edges-master/');
 
 
 img = imread(['Imgs', filesep, 'arm3.png']);
+
 img = imrotate(img,33,'crop');
+
+% this process was under imadjust(img), and is moved up here
+% this should find and blur the edge of the actual xray img and the black background
+% with an average filter 20*20
+img = removeEdge(img,20);
+figure('Name', 'edge_removed');imagesc(img);axis image;axis off; colormap gray;
 
 % crops the image by 30%
 img = img(ceil(size(img,1)*0.3):size(img,1),ceil(size(img,2)*0.3):size(img,2));
@@ -17,8 +24,7 @@ img = img(ceil(size(img,1)*0.3):size(img,1),ceil(size(img,2)*0.3):size(img,2));
 % increases the images contrast 
 img = imadjust(img); 
 
-% this should remove pixels in a 20 radius square of the image border
-%img = removeEdge(img,20);
+figure('Name', 'edge_removed');imagesc(img);axis image;axis off; colormap gray;
 
 t = nanmedian(img,'all');
 m = max(img,[],'all');
@@ -96,37 +102,21 @@ function imb = black2NaN(im,t)
 end
 
 
-% broken shit code
-function imb = removeEdge(im, fsize)
-    
-    pad = ceil(fsize/2);
-    imp = padarray(im,[pad pad],0,'both');
-    
-    xlen = size(im,1);
-    ylen = size(im,2);
-    
-    for i = pad+1:(xlen-pad-1)
-        for j = pad+1:(ylen-pad-1)
-%             disp(i);
-%             disp(j);
-%             disp(i-pad);
-%             disp(j-pad);
-%             disp('---');
-            if imp(i,j) > 20
-                %disp('in if');
-                chunk = imp(j-pad:j+pad,i-pad:i+pad);
-                
-                % if there is a value in the chunk = 0 then set rest to 0
-                if find(chunk < 20)
-                    %disp('here');
-                    imp(j-pad:j+pad,i-pad:i+pad) = 21;
-                    %disp(imp(j-pad:j+pad,i-pad:i+pad));
-                end
-
+function imb = removeEdge(im, rad)
+    %works only for images from our xray dataset
+    %blur the edge of anything adjacent to black pixels
+    %so that the algorithm doesn't get comfused by image edges
+    [row, col] = size(im);
+    t = 0.01*mean(im, 'all'); %test threshold
+    canvas = im;
+    im = padarray(im, [rad,rad], 0);
+    for r=1:row
+        for c=1:col
+            block = im(r:r+2*rad, c:c+2*rad);
+            if min(block, [], 'all') < t
+                canvas(r,c) = mean(block, 'all');
             end
         end
     end
-    
-    imb = imp(pad+1:(xlen-pad-1),pad+1:(ylen-pad-1));
-    %imagesc(imb);axis image;colormap gray;
+    imb = canvas;
 end
