@@ -6,64 +6,77 @@ addpath(genpath('code/'));
 addpath('Imgs/');
 addpath('edges-master/');
 
-imName = 'arm4.png';
+%imName = 'arm4.png';
 
+imageFile = 'Imgs';
 
+s = dir(fullfile(imageFile,'*.jpg')); % pattern to match filenames.
+s = [s; dir(fullfile(imageFile,'*.png'))];
+s = [s; dir(fullfile(imageFile,'*.jpeg'))];
 
-img = imread(['Imgs', filesep, imName]);
-
-img = imrotate(img,30,'crop');
-
-% this process was under imadjust(img), and is moved up here
-% this should find and blur the edge of the actual xray img and the black background
-% with an average filter 20*20
-img = removeEdge(img,20);
-%figure('Name', 'edge_removed');imagesc(img);axis image;axis off; colormap gray;
-
-% crops the image by 30%
-img = img(ceil(size(img,1)*0.3):size(img,1),ceil(size(img,2)*0.3):size(img,2));
-
-% increases the images contrast 
-img = imadjust(img); 
-
-%figure('Name', 'edge_removed');imagesc(img);axis image;axis off; colormap gray;
-
-t = nanmedian(img,'all');
-m = max(img,[],'all');
-% removes 95% below the max white value
-img = black2NaN(img,m*.95);
-img = imresize(img, [round(size(img,1)/4), round(size(img,2)/4)]);
-
-
-
-%compute the kernel for the image size
-%you only need to compute the kernal once for one an image size
-[kernels, kernels_flip, kernel_params] =kernelInitialization(img);
-ticId = tic;
-%the lines variable contains the detected line segmentations it arranged as
-%[x1 y1 x2 y2 probability]
-%The fullLines are the detected lines. It is arranged as [rho theta probability]
-[lines, fullLines] =lineSegmentation_HighRes(img,kernels, kernels_flip, kernel_params);
-display('Total time');
-toc(ticId)
-fig = figure;
-imshow(img);
-hold all
-%Order lines by probability
-lines = sortrows(lines, -5);
-ttlLines = size(lines,1);
-for i = 1:ttlLines
-    %plot all lines
-    line([lines(i,1) lines(i,3)], [lines(i,2) lines(i,4)],'Color', rand(1,3), 'LineWidth', 3);
+for k = 1:numel(s)
+    %F = fullfile(s(k).name);
+    %img = imread(['Imgs', filesep, F]);
+    detectBreak(s(k).name); %% It Runs this script for every Image
+%     S(k).data = I; % optional, save data.
 end
 
+function detectBreak(imName)
 
-sl = sortLines(lines);
-disp(sl);
-bb = isBroken(sl);
-output(imName, fig, bb);
+    img = imread(['Imgs', filesep, imName]);
+
+    img = imrotate(img,30,'crop');
+
+    % this process was under imadjust(img), and is moved up here
+    % this should find and blur the edge of the actual xray img and the black background
+    % with an average filter 20*20
+    img = removeEdge(img,20);
+    %figure('Name', 'edge_removed');imagesc(img);axis image;axis off; colormap gray;
+
+    % crops the image by 30%
+    img = img(ceil(size(img,1)*0.3):size(img,1),ceil(size(img,2)*0.3):size(img,2));
+
+    % increases the images contrast 
+    img = imadjust(img); 
+
+    %figure('Name', 'edge_removed');imagesc(img);axis image;axis off; colormap gray;
+
+    t = nanmedian(img,'all');
+    m = max(img,[],'all');
+    % removes 95% below the max white value
+    img = black2NaN(img,m*.95);
+    img = imresize(img, [round(size(img,1)/4), round(size(img,2)/4)]);
 
 
+
+    %compute the kernel for the image size
+    %you only need to compute the kernal once for one an image size
+    [kernels, kernels_flip, kernel_params] =kernelInitialization(img);
+    ticId = tic;
+    %the lines variable contains the detected line segmentations it arranged as
+    %[x1 y1 x2 y2 probability]
+    %The fullLines are the detected lines. It is arranged as [rho theta probability]
+    [lines, fullLines] =lineSegmentation_HighRes(img,kernels, kernels_flip, kernel_params);
+    display('Total time');
+    toc(ticId)
+    fig = figure;
+    imshow(img);
+    hold all
+    %Order lines by probability
+    lines = sortrows(lines, -5);
+    ttlLines = size(lines,1);
+    for i = 1:ttlLines
+        %plot all lines
+        line([lines(i,1) lines(i,3)], [lines(i,2) lines(i,4)],'Color', rand(1,3), 'LineWidth', 3);
+    end
+
+
+    sl = sortLines(lines);
+    %disp(sl);
+    bb = isBroken(sl);
+    output(imName, fig, bb);
+
+end
 
 function imout = adcontrst(im)
     im = im2double(im);
